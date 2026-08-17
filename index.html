@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VulnScanner - Scanner de Vulnerabilidades</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e17;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        header {
+            text-align: center;
+            padding: 60px 0;
+            border-bottom: 1px solid #1a2a3a;
+        }
+        header h1 {
+            font-size: 3.5em;
+            background: linear-gradient(135deg, #00d4ff, #7b2ffc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        header p { font-size: 1.3em; color: #8899aa; margin-top: 10px; }
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .badge {
+            background: #111927;
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid #1a2a3a;
+            font-size: 0.9em;
+        }
+        .section {
+            background: #111927;
+            border-radius: 16px;
+            padding: 40px;
+            margin: 30px 0;
+            border: 1px solid #1a2a3a;
+        }
+        .section h2 { color: #00d4ff; margin-bottom: 20px; font-size: 2em; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .feature {
+            background: #0d1520;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #1a2a3a;
+        }
+        .feature h3 { color: #00d4ff; }
+        .btn {
+            display: inline-block;
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #00d4ff, #7b2ffc);
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid #00d4ff;
+        }
+        .pricing {
+            text-align: center;
+        }
+        .pricing .price { font-size: 2.5em; color: #00d4ff; }
+        .pricing .period { color: #8899aa; }
+        .pricing ul { list-style: none; padding: 0; }
+        .pricing li { padding: 8px 0; border-bottom: 1px solid #1a2a3a; }
+        .pricing .check { color: #00c864; }
+        .pricing .cross { color: #ff4444; }
+        .footer { text-align: center; padding: 40px 0; border-top: 1px solid #1a2a3a; color: #667788; }
+        @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 VulnScanner</h1>
+            <p>Scanner de Vulnerabilidades Multi-Tipo em Rust</p>
+            <div class="badges">
+                <span class="badge">🔥 15 tipos de vulnerabilidades</span>
+                <span class="badge">⚡ 373 vulnerabilidades detectadas</span>
+                <span class="badge">🦀 Escrito em Rust</span>
+            </div>
+            <div style="margin-top: 20px;">
+                <a href="https://github.com/5n4vc4smh8-pixel/vuln-scanner" class="btn">⭐ GitHub</a>
+                <a href="#pricing" class="btn btn-secondary" style="margin-left: 10px;">💰 Enterprise</a>
+            </div>
+        </header>
+
+        <div class="section">
+            <h2>🚀 Características</h2>
+            <div class="grid-3">
+                <div class="feature">
+                    <h3>🛡️ 15 Tipos</h3>
+                    <p>SQLi, XSS, LFI, SSTI, SSRF, CSRF, XXE, IDOR, Race Conditions, APIs REST, GraphQL, NoSQL, Command Injection, Path Traversal e WAF Detection.</p>
+                </div>
+                <div class="feature">
+                    <h3>🔓 WAF Bypass</h3>
+                    <p>Encoding, ofuscação, case variation, comentários SQL e técnicas avançadas para contornar firewalls.</p>
+                </div>
+                <div class="feature">
+                    <h3>🔑 Autenticação</h3>
+                    <p>Suporte a login, Bearer Token, cookies, formulários personalizados e autenticação básica.</p>
+                </div>
+                <div class="feature">
+                    <h3>🌐 Interface Web</h3>
+                    <p>Dashboard para gerenciar scans, visualizar relatórios e agendar varreduras automáticas.</p>
+                </div>
+                <div class="feature">
+                    <h3>📊 Relatórios</h3>
+                    <p>Relatórios detalhados em Markdown com evidências, remediações e referências.</p>
+                </div>
+                <div class="feature">
+                    <h3>⚡ Performance</h3>
+                    <p>Escrito em Rust com async/await e processamento paralelo para scans ultrarrápidos.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section" id="pricing">
+            <h2>💰 Planos</h2>
+            <div class="grid-2">
+                <div class="feature pricing">
+                    <h3>🆓 Open Source</h3>
+                    <p class="price">Grátis</p>
+                    <ul>
+                        <li><span class="check">✅</span> 15 tipos de vulnerabilidades</li>
+                        <li><span class="check">✅</span> WAF Bypass</li>
+                        <li><span class="check">✅</span> Autenticação básica</li>
+                        <li><span class="check">✅</span> Interface Web</li>
+                        <li><span class="check">✅</span> Relatórios Markdown</li>
+                        <li><span class="cross">❌</span> Scan de portas</li>
+                        <li><span class="cross">❌</span> CI/CD Integration</li>
+                        <li><span class="cross">❌</span> Suporte prioritário</li>
+                    </ul>
+                    <a href="https://github.com/5n4vc4smh8-pixel/vuln-scanner" class="btn">⭐ Baixar</a>
+                </div>
+                <div class="feature pricing" style="border-color: #00d4ff;">
+                    <h3>💎 Enterprise</h3>
+                    <p class="price">$99<span class="period">/mês</span></p>
+                    <ul>
+                        <li><span class="check">✅</span> Tudo do Open Source</li>
+                        <li><span class="check">✅</span> Scan de portas (Nmap-like)</li>
+                        <li><span class="check">✅</span> Integração CI/CD (GitHub Actions)</li>
+                        <li><span class="check">✅</span> Relatórios PDF/HTML</li>
+                        <li><span class="check">✅</span> Dashboard com gráficos</li>
+                        <li><span class="check">✅</span> Suporte prioritário (24/7)</li>
+                        <li><span class="check">✅</span> SLA 99.9%</li>
+                        <li><span class="check">✅</span> On-premise disponível</li>
+                    </ul>
+                    <a href="mailto:5n4vc4smh8@privaterelay.appleid.com" class="btn">💰 Contratar</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Resultados no DVWA</h2>
+            <div class="grid-2">
+                <div class="feature" style="text-align: center;">
+                    <h3 style="font-size: 3em;">373</h3>
+                    <p>Vulnerabilidades encontradas</p>
+                </div>
+                <div class="feature" style="text-align: center;">
+                    <h3 style="color: #ff4444; font-size: 3em;">86</h3>
+                    <p>Vulnerabilidades Críticas</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🤝 Contribua</h2>
+            <p>Contribuições são bem-vindas! Faça um fork, crie uma branch e abra um Pull Request.</p>
+            <div style="margin-top: 15px;">
+                <a href="https://github.com/5n4vc4smh8-pixel/vuln-scanner" class="btn">⭐ GitHub</a>
+                <a href="https://github.com/5n4vc4smh8-pixel/vuln-scanner/issues" class="btn btn-secondary" style="margin-left: 10px;">🐛 Issues</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>VulnScanner - MIT License</p>
+            <p>Desenvolvido com ❤️ por 5n4vc4smh8-pixel</p>
+        </div>
+    </div>
+</body>
+</html>

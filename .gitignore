@@ -1,0 +1,31 @@
+# Rust
+/target/
+Cargo.lock
+
+# Relatórios gerados
+report_*.md
+report_*.pdf
+benchmarks/report_*.md
+benchmarks/.target_*.log
+
+# Bancos de dados de teste (nunca commitar)
+*.db
+target_real/*.db
+benchmarks/*.db
+
+# Binários pré-compilados (baixe do Release no GitHub)
+bin_*/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Ambientes de teste (nunca commitar bancos do alvo real)
+target_real/*.db
+target_real/catalogo/
