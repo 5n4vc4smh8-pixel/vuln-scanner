@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>VulnScanner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0a0e17;
+            color: #e0e0e0;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 { color: #00d4ff; text-align: center; }
+        .card {
+            background: #111927;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #1a2a3a;
+            margin: 20px 0;
+        }
+        label { display: block; margin: 10px 0 5px; color: #aabbcc; }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            background: #0d1520;
+            border: 1px solid #1a2a3a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            box-sizing: border-box;
+        }
+        .checkbox { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+        .btn {
+            padding: 12px 30px;
+            background: #00d4ff;
+            border: none;
+            border-radius: 6px;
+            color: #0a0e17;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover { background: #00e5ff; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status { padding: 12px; border-radius: 6px; margin-top: 15px; display: none; }
+        .status.ok { display: block; background: #00c86422; border: 1px solid #00c864; }
+        .status.erro { display: block; background: #ff444422; border: 1px solid #ff4444; }
+        .status.loading { display: block; background: #00d4ff22; border: 1px solid #00d4ff; }
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #0d1520;
+            border-radius: 6px;
+            border: 1px solid #1a2a3a;
+            margin: 8px 0;
+        }
+        .report-item:hover { border-color: #00d4ff; }
+        .report-actions a, .report-actions button {
+            margin-left: 8px;
+            padding: 5px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .btn-ver { background: #00d4ff; color: #0a0e17; }
+        .btn-del { background: #ff4444; color: white; border: none; cursor: pointer; }
+        .pequeno { color: #667788; font-size: 13px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <h1>🔍 VulnScanner</h1>
+    <div class="card">
+        <h2>🚀 Novo Scan</h2>
+        <form id="formScan">
+            <label>URL Alvo</label>
+            <input type="text" id="target" placeholder="https://exemplo.com" required>
+            <div class="grid">
+                <div>
+                    <label>Timeout (segundos)</label>
+                    <input type="number" id="timeout" value="30">
+                </div>
+                <div>
+                    <label>Cookie (opcional)</label>
+                    <input type="text" id="cookie" placeholder="session=abc123">
+                </div>
+            </div>
+            <div class="checkbox">
+                <input type="checkbox" id="aggressive">
+                <label style="margin:0">Modo Agressivo</label>
+            </div>
+            <button type="submit" class="btn" id="btnScan">▶ Iniciar Scan</button>
+        </form>
+        <div id="status" class="status"></div>
+    </div>
+    <div class="card">
+        <h2>📄 Relatórios</h2>
+        <div id="listaRelatorios">Carregando...</div>
+    </div>
+    <script>
+        // Função para carregar relatórios - VERSÃO SIMPLES
+        function carregarRelatorios() {
+            var div = document.getElementById('listaRelatorios');
+            div.innerHTML = 'Carregando...';
+            
+            fetch('/reports')
+                .then(function(resposta) {
+                    return resposta.json();
+                })
+                .then(function(dados) {
+                    if (dados.length === 0) {
+                        div.innerHTML = 'Nenhum relatório encontrado.';
+                        return;
+                    }
+                    
+                    var html = '';
+                    for (var i = 0; i < dados.length; i++) {
+                        var item = dados[i];
+                        var nomeLimpo = item.nome.replace('report_', '').replace('.md', '');
+                        html += '<div class="report-item">';
+                        html += '<div><strong>' + nomeLimpo + '</strong>';
+                        html += '<div class="pequeno">' + item.data + '</div></div>';
+                        html += '<div class="report-actions">';
+                        html += '<a href="/report/' + item.nome + '" target="_blank" class="btn-ver">👁️ Ver</a>';
+                        html += '<button onclick="deletar(\'' + item.nome + '\')" class="btn-del">🗑️</button>';
+                        html += '</div></div>';
+                    }
+                    div.innerHTML = html;
+                })
+                .catch(function(erro) {
+                    div.innerHTML = 'Erro ao carregar: ' + erro;
+                });
+        }
+
+        // Função para deletar
+        function deletar(nome) {
+            if (!confirm('Deletar este relatório?')) return;
+            fetch('/delete/' + nome, { method: 'DELETE' })
+                .then(function() {
+                    carregarRelatorios();
+                });
+        }
+
+        // Quando o formulário for enviado
+        document.getElementById('formScan').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            var btn = document.getElementById('btnScan');
+            var status = document.getElementById('status');
+            
+            status.className = 'status loading';
+            status.innerHTML = '⏳ Executando scan...';
+            btn.disabled = true;
+            
+            var dados = {
+                target: document.getElementById('target').value,
+                timeout: parseInt(document.getElementById('timeout').value),
+                cookie: document.getElementById('cookie').value,
+                aggressive: document.getElementById('aggressive').checked
+            };
+            
+            fetch('/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dados)
+            })
+            .then(function(resposta) {
+                return resposta.json();
+            })
+            .then(function(dados) {
+                if (dados.sucesso) {
+                    status.className = 'status ok';
+                    status.innerHTML = '✅ Scan finalizado! Relatório gerado.';
+                    setTimeout(carregarRelatorios, 1000);
+                } else {
+                    status.className = 'status erro';
+                    status.innerHTML = '❌ ' + (dados.erro || 'Erro desconhecido');
+                }
+                btn.disabled = false;
+            })
+            .catch(function(erro) {
+                status.className = 'status erro';
+                status.innerHTML = '❌ Erro: ' + erro;
+                btn.disabled = false;
+            });
+        });
+
+        // Carrega os relatórios ao abrir a página
+        carregarRelatorios();
+    </script>
+</body>
+</html>

