@@ -1,5 +1,8 @@
 # Vuln-Scanner v9.2.1 🛡️
 
+[![vuln-scanner - Stealthy, high-performance web vulnerability scanner in Rust | Product Hunt](https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=930508&theme=light)](https://www.producthunt.com/posts/vuln-scanner?utm_source=badge-featured&utm_medium=badge&utm_souce=badge-vuln-scanner)
+
+
 O **Vuln-Scanner** é um scanner de vulnerabilidades web moderno escrito em Rust, focado em performance, furtividade e correlação com inteligência de ameaças (CTI).
 
 ## Novidades da v9.2.1
